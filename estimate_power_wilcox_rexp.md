@@ -24,7 +24,11 @@ We want to simulate `mutation_load` values for `benefit` and `non-benefit` patie
 
 The question at hand is, if we saw the same association in our cohort as they saw in the larger cohort, would this be statistically significant?
 
-They observed 1. median mutation load among benefit patients of 12.4 2. median mutation load among non-benefit patients of 6.4 3. approx 20% of patients had a durable reponse
+They observed
+
+1.  median mutation load among benefit patients of 12.4
+2.  median mutation load among non-benefit patients of 6.4
+3.  approx 20% of patients had a durable reponse
 
 We will use these values in our simulations.
 
@@ -37,21 +41,7 @@ As a starting point, we will try using an exponential distribution to simulate t
 
 ``` r
 library(tidyverse)
-```
 
-    ## Loading tidyverse: ggplot2
-    ## Loading tidyverse: tibble
-    ## Loading tidyverse: tidyr
-    ## Loading tidyverse: readr
-    ## Loading tidyverse: purrr
-    ## Loading tidyverse: dplyr
-
-    ## Conflicts with tidy packages ----------------------------------------------
-
-    ## filter(): dplyr, stats
-    ## lag():    dplyr, stats
-
-``` r
 ## generate simulated data 
 sim_data <- function(index = 1, 
                      n = 30,
@@ -80,14 +70,14 @@ df %>% head()
 ```
 
     ## # A tibble: 6 × 2
-    ##            x   group
-    ##        <dbl>   <chr>
-    ## 1  5.4417585 benefit
-    ## 2 13.8523706 benefit
-    ## 3 42.7537328 benefit
-    ## 4  4.7295631 benefit
-    ## 5  0.4773589 benefit
-    ## 6  4.0944285 benefit
+    ##           x   group
+    ##       <dbl>   <chr>
+    ## 1  2.180910 benefit
+    ## 2 29.556676 benefit
+    ## 3  5.523065 benefit
+    ## 4  9.126047 benefit
+    ## 5  3.209550 benefit
+    ## 6  6.017778 benefit
 
 Here is a plot of these simulated data:
 
@@ -139,12 +129,12 @@ str(res)
 
     ## 'data.frame':    1000 obs. of  7 variables:
     ##  $ simulation : chr  "1" "2" "3" "4" ...
-    ##  $ statistic  : num  51 78 105 87 70 81 50 107 89 101 ...
-    ##  $ p.value    : num  0.63383 0.32293 0.00687 0.12902 0.59423 ...
+    ##  $ statistic  : num  68 99 88 71 106 103 87 62 64 102 ...
+    ##  $ p.value    : num  0.67446 0.02267 0.11445 0.5557 0.00546 ...
     ##  $ method     : Factor w/ 1 level "Wilcoxon rank sum test": 1 1 1 1 1 1 1 1 1 1 ...
     ##  $ alternative: Factor w/ 1 level "two.sided": 1 1 1 1 1 1 1 1 1 1 ...
-    ##  $ benefit    : num  4.56 8.73 12.47 9.63 5.24 ...
-    ##  $ non        : num  6.7 4.17 3.95 3.27 4.18 ...
+    ##  $ benefit    : num  10.37 18.09 8.04 6.23 16.59 ...
+    ##  $ non        : num  5.98 6.23 4.18 5.39 5.88 ...
 
 Summarizing results
 -------------------
@@ -157,7 +147,7 @@ It is fairly trivial to calculate this as:
 mean(res$p.value < 0.05)
 ```
 
-    ## [1] 0.219
+    ## [1] 0.191
 
 We can also plot the power at different levels of alpha, by computing the cumulative proportion of samples with p&lt;=*α*.
 
@@ -173,17 +163,5 @@ It's thus equally as important to inspect the simulated data, both graphically a
 Following are some plots that may aid in this process:
 
 ![](estimate_power_wilcox_rexp_files/figure-markdown_github/plot-simulated-medians-1.png)
-
-``` r
-## plot of simulated data from a single simulation, selected at random
-ggplot(sim_df[runif(min=0, max=1000, n=6)] %>% 
-         dplyr::bind_rows(.id='simulation') %>%
-         dplyr::left_join(res, by='simulation') %>%
-         dplyr::mutate(sim_label = stringr::str_c('Sim ', simulation, ' (p = ', format.pval(`p.value`, digits = 2), ')')),
-       aes(y = x, x = group, colour = group, group = group)) + 
-  geom_boxplot() +
-  facet_wrap(~ sim_label) +
-  ggtitle('Distribution of simulated data by DCB\n(showing results for 6 simulations selected at random)')
-```
 
 ![](estimate_power_wilcox_rexp_files/figure-markdown_github/plot-example-simulations-1.png)

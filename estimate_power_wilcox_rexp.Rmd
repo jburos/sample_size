@@ -6,7 +6,12 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+```{r init, echo=FALSE}
+suppressPackageStartupMessages(suppressMessages(suppressWarnings(library(tidyverse))))
+set.seed(12344556)
 ```
 
 ## Introduction
@@ -29,7 +34,8 @@ We want to simulate `mutation_load` values for `benefit` and `non-benefit` patie
 
 The question at hand is, if we saw the same association in our cohort as they saw in the larger cohort, would this be statistically significant?
 
-They observed 
+They observed
+
   1. median mutation load among benefit patients of 12.4
   2. median mutation load among non-benefit patients of 6.4
   3. approx 20% of patients had a durable reponse
@@ -165,7 +171,7 @@ ggplot(res %>%
   ggtitle('Distribution of simulated median values by DCB\nShowing results for n=1000 simulations')
 ```
 
-```{r plot-example-simulations}
+```{r plot-example-simulations, echo=FALSE}
 ## plot of simulated data from a single simulation, selected at random
 ggplot(sim_df[runif(min=0, max=1000, n=6)] %>% 
          dplyr::bind_rows(.id='simulation') %>%
