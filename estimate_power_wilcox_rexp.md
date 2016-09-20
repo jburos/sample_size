@@ -1,27 +1,22 @@
----
-title: "Estimate power for mutational load <> PFS"
-author: "Jacqueline Buros"
-date: "September 20, 2016"
-output: github_document
----
+Estimate power for mutational load &lt;&gt; PFS
+================
+Jacqueline Buros
+September 20, 2016
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+Introduction
+------------
 
-## Introduction
-
-In general, we will estimate the power to detect a "significant" effect 
-using simulation.
+In general, we will estimate the power to detect a "significant" effect using simulation.
 
 The process to do this is fairly straightforward:
 
-1. Write a function to simulate data according to the alternative hypothesis (H1)
-2. Repeat the data simulation X times (we choose X=1000)
-3. Analyze each replicated dataset as you would the real data (ie do the same statistical test)
-4. Compute the power to detect an effect at p < alpha (ie, the proportion of trials with p < alpha)
+1.  Write a function to simulate data according to the alternative hypothesis (H1)
+2.  Repeat the data simulation X times (we choose X=1000)
+3.  Analyze each replicated dataset as you would the real data (ie do the same statistical test)
+4.  Compute the power to detect an effect at p &lt; alpha (ie, the proportion of trials with p &lt; alpha)
 
-## The Plan
+The Plan
+--------
 
 In our case, we have a fixed sample size of ~29 patients, so we treat this as given.
 
@@ -29,22 +24,34 @@ We want to simulate `mutation_load` values for `benefit` and `non-benefit` patie
 
 The question at hand is, if we saw the same association in our cohort as they saw in the larger cohort, would this be statistically significant?
 
-They observed 
-  1. median mutation load among benefit patients of 12.4
-  2. median mutation load among non-benefit patients of 6.4
-  3. approx 20% of patients had a durable reponse
+They observed 1. median mutation load among benefit patients of 12.4 2. median mutation load among non-benefit patients of 6.4 3. approx 20% of patients had a durable reponse
 
 We will use these values in our simulations.
 
-## Data simulation
+Data simulation
+---------------
 
-One challenge in simulating these data is that the Rosenberg et al. paper used a non-parametric statistical test, and so we do not have an easy parametric form from which to simulate these data. 
+One challenge in simulating these data is that the Rosenberg et al. paper used a non-parametric statistical test, and so we do not have an easy parametric form from which to simulate these data.
 
 As a starting point, we will try using an exponential distribution to simulate these data, since counts are often distributed exponentially. Note that this is a parameter that we can modify later if it doesn't work well; we will start here and see how reasonable the simulated data are.
 
-```{r sim-data-function}
+``` r
 library(tidyverse)
+```
 
+    ## Loading tidyverse: ggplot2
+    ## Loading tidyverse: tibble
+    ## Loading tidyverse: tidyr
+    ## Loading tidyverse: readr
+    ## Loading tidyverse: purrr
+    ## Loading tidyverse: dplyr
+
+    ## Conflicts with tidy packages ----------------------------------------------
+
+    ## filter(): dplyr, stats
+    ## lag():    dplyr, stats
+
+``` r
 ## generate simulated data 
 sim_data <- function(index = 1, 
                      n = 30,
@@ -67,40 +74,55 @@ Notice that we have put default values here which match those we observed in the
 
 We can use this function to simulate a dataset like so:
 
-```{r sim-data-test}
+``` r
 df <- sim_data()
 df %>% head()
 ```
 
+    ## # A tibble: 6 × 2
+    ##            x   group
+    ##        <dbl>   <chr>
+    ## 1  5.4417585 benefit
+    ## 2 13.8523706 benefit
+    ## 3 42.7537328 benefit
+    ## 4  4.7295631 benefit
+    ## 5  0.4773589 benefit
+    ## 6  4.0944285 benefit
+
 Here is a plot of these simulated data:
-```{r sim-data-test-plot}
+
+``` r
 ggplot(df, aes(y = x, x = group, group = group, colour = group)) +
   geom_boxplot()
 ```
 
-## Simulating replicate samples
+![](estimate_power_wilcox_rexp_files/figure-markdown_github/sim-data-test-plot-1.png)
+
+Simulating replicate samples
+----------------------------
 
 Next we will generate 1000 simulations, each using the same default inputs.
 
-```{r sim_df}
+``` r
 sim_df <- seq_len(1000) %>%
   map(sim_data, loc_benefit = 12.4, loc_non = 6.4, n = 30, prop_benefit = 0.19) 
 ```
 
 This results in a list of 1000 datasets.
 
-## Computing results for each simulation
+Computing results for each simulation
+-------------------------------------
 
 Next, we summarize the median by DCB-group for each simulation so that we can see how well our simulated data matches the observed values in the Rosenberg publication.
 
-```{r median_summary}
+``` r
 median_summary <- sim_df %>%
   map_df(.f = ~ .x %>% group_by(group) %>% summarize(median = median(x)) %>% ungroup() %>% spread(key = group, value = median))
 ```
 
 Finally, we apply the wilcoxon ranksum (aka Mann Whitney U) test to each sample, and join these results to our summary of medians by group.
 
-```{r sim-results}
+``` r
 ## compute mann whitney u (wilcoxon ranksum) 
 ## statistical test for each replicate
 res <- sim_df %>%
@@ -111,44 +133,38 @@ res <- sim_df %>%
 
 The resulting data.frame contains the following pieces of information:
 
-```{r show-df}
+``` r
 str(res)
 ```
 
-## Summarizing results
+    ## 'data.frame':    1000 obs. of  7 variables:
+    ##  $ simulation : chr  "1" "2" "3" "4" ...
+    ##  $ statistic  : num  51 78 105 87 70 81 50 107 89 101 ...
+    ##  $ p.value    : num  0.63383 0.32293 0.00687 0.12902 0.59423 ...
+    ##  $ method     : Factor w/ 1 level "Wilcoxon rank sum test": 1 1 1 1 1 1 1 1 1 1 ...
+    ##  $ alternative: Factor w/ 1 level "two.sided": 1 1 1 1 1 1 1 1 1 1 ...
+    ##  $ benefit    : num  4.56 8.73 12.47 9.63 5.24 ...
+    ##  $ non        : num  6.7 4.17 3.95 3.27 4.18 ...
 
-The power to detect an effect at $\alpha$ <= 0.05 is approximated by the proportion of simulations yielding a p-value < $\alpha$.
+Summarizing results
+-------------------
+
+The power to detect an effect at *α* &lt;= 0.05 is approximated by the proportion of simulations yielding a p-value &lt; *α*.
 
 It is fairly trivial to calculate this as:
 
-```{r summarize-power}
+``` r
 mean(res$p.value < 0.05)
 ```
 
-We can also plot the power at different levels of alpha, by computing the cumulative proportion of samples with p<=$\alpha$.
+    ## [1] 0.219
 
-```{r plot-power-by-alpha, echo=FALSE}
-## data-prep for plot of power (cum proportion of samples) by alpha (p-value threshold)
-sum_res <- res %>%
-  dplyr::group_by(`p.value`) %>%
-  dplyr::summarize(n_pvalue = n()) %>%
-  dplyr::ungroup() %>%
-  dplyr::arrange(`p.value`) %>%
-  dplyr::mutate(total_n = sum(n_pvalue),
-                cum_n = cumsum(n_pvalue),
-                power = cum_n/total_n
-  ) %>%
-  dplyr::rename(alpha = `p.value`)
+We can also plot the power at different levels of alpha, by computing the cumulative proportion of samples with p&lt;=*α*.
 
-## plot of power by alpha threshold
-ggplot(sum_res, aes(x = alpha, y = power)) + 
-  geom_line() + 
-  geom_vline(aes(xintercept=0.05), color = 'green', linetype = 'dashed') +
-  theme_minimal() +
-  ggtitle('Power to detect assoc of mutation load with DCB\nAssuming n = 30, prop = 0.3, and medians = 12.4 vs 6.4')
-```
+![](estimate_power_wilcox_rexp_files/figure-markdown_github/plot-power-by-alpha-1.png)
 
-## Evaluating quality of simulated datasets
+Evaluating quality of simulated datasets
+----------------------------------------
 
 However, it's useful to keep in mind that our power calculation here is only as good as the data simulations we used to generate it.
 
@@ -156,16 +172,9 @@ It's thus equally as important to inspect the simulated data, both graphically a
 
 Following are some plots that may aid in this process:
 
-```{r plot-simulated-medians, echo=FALSE}
-## plot of simulated median values, for each simulation
-ggplot(res %>% 
-         gather(benefit, non, value = 'simulated_median', key = 'group'),
-       aes(y = simulated_median, x = group, colour=group, group = group)) + 
-  geom_boxplot() +
-  ggtitle('Distribution of simulated median values by DCB\nShowing results for n=1000 simulations')
-```
+![](estimate_power_wilcox_rexp_files/figure-markdown_github/plot-simulated-medians-1.png)
 
-```{r plot-example-simulations}
+``` r
 ## plot of simulated data from a single simulation, selected at random
 ggplot(sim_df[runif(min=0, max=1000, n=6)] %>% 
          dplyr::bind_rows(.id='simulation') %>%
@@ -177,3 +186,4 @@ ggplot(sim_df[runif(min=0, max=1000, n=6)] %>%
   ggtitle('Distribution of simulated data by DCB\n(showing results for 6 simulations selected at random)')
 ```
 
+![](estimate_power_wilcox_rexp_files/figure-markdown_github/plot-example-simulations-1.png)
