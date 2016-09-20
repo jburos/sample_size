@@ -107,7 +107,12 @@ Next, we summarize the median by DCB-group for each simulation so that we can se
 
 ``` r
 median_summary <- sim_df %>%
-  map_df(.f = ~ .x %>% group_by(group) %>% summarize(median = median(x)) %>% ungroup() %>% spread(key = group, value = median))
+  map_df(.f = ~ .x %>% 
+           group_by(group) %>% 
+           summarize(median = median(x)) %>% 
+           ungroup() %>% 
+           spread(key = group, value = median)
+         )
 ```
 
 Finally, we apply the wilcoxon ranksum (aka Mann Whitney U) test to each sample, and join these results to our summary of medians by group.

@@ -101,7 +101,12 @@ Next, we summarize the median by DCB-group for each simulation so that we can se
 
 ```{r median_summary}
 median_summary <- sim_df %>%
-  map_df(.f = ~ .x %>% group_by(group) %>% summarize(median = median(x)) %>% ungroup() %>% spread(key = group, value = median))
+  map_df(.f = ~ .x %>% 
+           group_by(group) %>% 
+           summarize(median = median(x)) %>% 
+           ungroup() %>% 
+           spread(key = group, value = median)
+         )
 ```
 
 Finally, we apply the wilcoxon ranksum (aka Mann Whitney U) test to each sample, and join these results to our summary of medians by group.
@@ -176,7 +181,11 @@ ggplot(res %>%
 ggplot(sim_df[runif(min=0, max=1000, n=6)] %>% 
          dplyr::bind_rows(.id='simulation') %>%
          dplyr::left_join(res, by='simulation') %>%
-         dplyr::mutate(sim_label = stringr::str_c('Sim ', simulation, ' (p = ', format.pval(`p.value`, digits = 2), ')')),
+         dplyr::mutate(sim_label = stringr::str_c('Sim ',
+                                                  simulation,
+                                                  ' (p = ',
+                                                  format.pval(`p.value`, digits = 2),
+                                                  ')')),
        aes(y = x, x = group, colour = group, group = group)) + 
   geom_boxplot() +
   facet_wrap(~ sim_label) +
